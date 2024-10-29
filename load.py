@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 
+from utils import generate_amounts_array
+
 
 class Load:
     consumption_amounts: np.array
@@ -32,13 +34,15 @@ class StaticLoad(Load):
 cols = ["Global_active_power", "Global_reactive_power", "Voltage", "Global_intensity", "Sub_metering_1",
         "Sub_metering_2", "Sub_metering_3"]
 
-data = pd.read_csv('household_power_consumption.csv', sep=";", nrows=100_000)
+data = pd.read_csv('household_power_consumption.csv', sep=";")
 data = data[data["Global_active_power"] != "?"]
 for col in cols:
     data.loc[:, col] = pd.to_numeric(data[col], errors='coerce')
 data["Nonheat_active_power"] = data["Global_active_power"] * 1000 - data["Sub_metering_3"] * 60
 data["Timestamp"] = pd.to_datetime(data["Date"] + " " + data["Time"], dayfirst=True)
 data.set_index(["Timestamp"])
+indices = data["Timestamp"].values.copy()
+print("Done with loading data")
 
 
 class UCIDataLoad(Load):
@@ -51,8 +55,15 @@ class UCIDataLoad(Load):
     def __init__(self, start_timestamp: pd.Timestamp):
         self.start_timestamp = start_timestamp
 
+    def initialize(self, sim_length: int, delta_t: float):
+        super().initialize(sim_length, delta_t)
+        self.consumption_amounts = generate_amounts_array(
+            indices,
+            data["Nonheat_active_power"],
+            delta_t,
+            sim_length,
+            self.start_timestamp
+        )
+
     def consume(self, index: int) -> float:
-        start = self.start_timestamp + pd.Timedelta(hours=index * self.delta_t)
-        end = self.start_timestamp + pd.Timedelta(hours=(index + 1) * self.delta_t)
-        rows = data[(start <= data["Timestamp"]) & (data["Timestamp"] < end)]
-        return rows["Nonheat_active_power"].mean()
+        return self.consumption_amounts[index]

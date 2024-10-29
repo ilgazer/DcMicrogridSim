@@ -128,3 +128,11 @@ class System:
         # Adjust layout for better fit
         plt.tight_layout()
         plt.show()
+
+    def stats(self):
+        print(f"Total Generated: {np.sum(self.total_generation) * self.delta_t / 1000: .2f}kWh")
+        for i, gen in enumerate(self.generators):
+            print(f"{gen.__class__.__name__} {i + 1}")
+            print("\n".join([f"\t{k}: {v}" for k, v in gen.stats().items()]))
+
+        print(f"Total Consumption: {np.sum(self.total_consumption) * self.delta_t / 1000:.2f}kWh")
