@@ -1,3 +1,6 @@
+import asyncio
+from concurrent.futures import ProcessPoolExecutor
+
 import numpy as np
 import pandas as pd
 
@@ -14,7 +17,7 @@ def linear(x1: float, y1: float, x2: float, y2: float):
     return lambda x: (x - x1) * (y2 - y1) / (x2 - x1) + y1
 
 
-def generate_amounts_array(indices, values, delta_t, sim_length, start_timestamp):
+def _generate_amounts_array(indices, values, sim_length, delta_t, start_timestamp):
     amounts = np.zeros(sim_length)
 
     end_timestamp = start_timestamp + pd.Timedelta(hours=sim_length * delta_t)
@@ -27,6 +30,15 @@ def generate_amounts_array(indices, values, delta_t, sim_length, start_timestamp
             mean = np.mean(rng)
         amounts[i] = mean
     return amounts
+
+
+pool = ProcessPoolExecutor(max_workers=8)
+
+
+async def generate_amounts_array(indices, values, sim_length, delta_t, start_timestamp):
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(pool, _generate_amounts_array, indices, values, sim_length, delta_t,
+                                      start_timestamp)
 
 
 def find_emptys(target_inds, timestamps):

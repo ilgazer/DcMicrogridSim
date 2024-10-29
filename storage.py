@@ -19,7 +19,7 @@ class Storage:
         self.charge_efficiency = charge_efficiency
         self.degradation = degradation
 
-    def initialize(self, sim_length: int, delta_t: float):
+    async def initialize(self, sim_length: int, delta_t: float):
         self.delta_t = delta_t
 
         self.storage_capacities = np.zeros(sim_length)

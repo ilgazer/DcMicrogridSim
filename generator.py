@@ -1,9 +1,12 @@
 import math
 import random
+from functools import lru_cache
 
 import numpy as np
+import pandas as pd
+from async_lru import alru_cache
 
-from utils import linear, limit
+from utils import linear, limit, generate_amounts_array
 
 
 class Generator:
@@ -12,14 +15,14 @@ class Generator:
     sim_length: int
     delta_t: float
 
-    def initialize(self, sim_length: int, delta_t: float):
+    async def initialize(self, sim_length: int, delta_t: float):
         self.generation_amounts = np.zeros(sim_length)
         self.available_amounts = np.zeros(sim_length)
         self.delta_t = delta_t
         self.sim_length = sim_length
 
-    def generate(self, index: int) -> float:
-        pass
+    def generate(self, index: int) -> tuple[float, float]:
+        return self.generation_amounts[index], self.available_amounts[index]
 
     def policy(self, storage_ratio):
         pass
@@ -46,8 +49,8 @@ class Grid(Generator):
         self.mean_outage_length = mean_outage_length
         self.outage_length_std = outage_length_std
 
-    def initialize(self, sim_length: int, delta_t: float):
-        super().initialize(sim_length, delta_t)
+    async def initialize(self, sim_length: int, delta_t: float):
+        await super().initialize(sim_length, delta_t)
         self.outage_ind_period = math.ceil(self.outage_period / self.delta_t)
         self.generate_next_tick = True
 
@@ -78,8 +81,8 @@ class DieselGenerator(Generator):
         self.start_generator_ratio = start_generator_ratio
         self.stop_generator_ratio = stop_generator_ratio
 
-    def initialize(self, sim_length: int, delta_t: float):
-        super().initialize(sim_length, delta_t)
+    async def initialize(self, sim_length: int, delta_t: float):
+        await super().initialize(sim_length, delta_t)
         self.available_amounts += self.capacity
         self.generate_next_tick = True
 
@@ -95,3 +98,36 @@ class DieselGenerator(Generator):
             self.generate_next_tick = storage_ratio < self.start_generator_ratio
 
 
+@lru_cache(maxsize=None)
+def get_data():
+    data = pd.read_csv('Systeem_Amstelveen/2022_15min_data.csv', sep=",")
+    data["Timestamp"] = pd.to_datetime(data["Time"])
+    data.set_index(["Timestamp"])
+    data["Power Ratio"] = data["PV Productie (W)"] / 3080
+    indices = data["Timestamp"].values.copy()
+    print("Done with loading data")
+    return data, indices
+
+
+@alru_cache(maxsize=None)
+async def generate_solar_amounts(sim_length: int, delta_t: float, start_timestamp: pd.Timestamp):
+    data, indices = get_data()
+    return await generate_amounts_array(indices, data["Power Ratio"], sim_length, delta_t, start_timestamp)
+
+
+class SolarPanel(Generator):
+    capacity: float
+    start_timestamp: pd.Timestamp
+
+    def __init__(self, capacity: float, start_timestamp: pd.Timestamp):
+        """
+        Initialise new solar panel backed by Systeem_Amstelveen data
+        :param capacity: Capacity of the solar panel in Wp
+        """
+        self.capacity = capacity
+        self.start_timestamp = start_timestamp
+
+    async def initialize(self, sim_length: int, delta_t: float):
+        await super().initialize(sim_length, delta_t)
+        ratios = await generate_solar_amounts(sim_length, delta_t, self.start_timestamp)
+        self.available_amounts = self.generation_amounts = ratios * self.capacity
