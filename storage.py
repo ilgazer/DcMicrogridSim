@@ -41,10 +41,18 @@ class Storage:
         capacity = self.storage_capacities[index - 1] * self.degradation
         amount = self.storage_amounts[index - 1] + net_power * self.delta_t
 
-        self.storage_capacities[index] = capacity
+        # noinspection PyTypeChecker
         self.storage_amounts[index] = min(amount, capacity)
+        self.storage_capacities[index] = capacity
 
         if amount < 0:
             raise Exception(f"Battery depleted at t={index * self.delta_t}")
 
+        # noinspection PyTypeChecker
         return capacity, min(amount, capacity)
+
+    def get_initial_cost(self):
+        # Battery cost per wh derived from:
+        # https://www.expatinpoland.pl/photovoltaic-in-poland/
+        # TODO: Change source
+        return self.initial_capacity * 0.6914

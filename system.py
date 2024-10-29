@@ -39,17 +39,17 @@ class System:
         self.total_generation = np.zeros(sim_length)
         self.total_available_generation = np.zeros(sim_length)
 
-        await asyncio.gather(*(component.initialize(sim_length, delta_t) for component in
-                               (self.generators + self.loads + self.storages)))
+        components = self.generators + self.loads + self.storages
+        await asyncio.gather(*(component.initialize(sim_length, delta_t) for component in components))
 
-    async def simulate(self, time: float, delta_t: float):
+    async def simulate(self, sim_time: float, delta_t: float):
         """
         Simulate a system of components
-        :param time: Total simulation time in hours
+        :param sim_time: Total simulation time in hours
         :param delta_t: Time between subsequent ticks in hours
         :return:
         """
-        sim_length: int = math.ceil(time / delta_t) + 1
+        sim_length: int = math.ceil(sim_time / delta_t) + 1
         await self.initialize(sim_length, delta_t)
         for storage in self.storages:
             self.total_capacity[0] += storage.storage_capacities[0]
@@ -141,13 +141,20 @@ class System:
                          linestyle='--')
                 plt.show()
 
-    def stats(self):
+    def stats(self, show_each=False):
         print(f"Total Generated: {np.sum(self.total_generation) * self.delta_t / 1000: .2f}kWh")
         print(f"Average Generated: {np.average(self.total_generation):.2f}W")
 
-        for i, gen in enumerate(self.generators):
-            print(f"{gen.__class__.__name__} {i + 1}")
-            print("\n".join([f"\t{k}: {v}" for k, v in gen.stats().items()]))
+        if show_each:
+            for i, gen in enumerate(self.generators):
+                print(f"{gen.__class__.__name__} {i + 1}")
+                print("\n".join([f"\t{k}: {v}" for k, v in gen.stats().items()]))
 
         print(f"Total Consumption: {np.sum(self.total_consumption) * self.delta_t / 1000:.2f}kWh")
         print(f"Average Consumption: {np.average(self.total_consumption):.2f}W")
+
+    def get_initial_cost(self):
+        return sum(component.get_initial_cost() for component in self.generators + self.storages)
+
+    def get_operation_cost(self):
+        return sum(component.get_operation_cost() for component in self.generators)

@@ -10,10 +10,16 @@ from utils import linear, limit, generate_amounts_array
 
 
 class Generator:
+    fixed_cost: float
+    cost_per_wh: float
     generation_amounts: np.array
     available_amounts: np.array
     sim_length: int
     delta_t: float
+
+    def __init__(self, fixed_cost: float, cost_per_wh: float):
+        self.fixed_cost = fixed_cost
+        self.cost_per_wh = cost_per_wh
 
     async def initialize(self, sim_length: int, delta_t: float):
         self.generation_amounts = np.zeros(sim_length)
@@ -34,6 +40,12 @@ class Generator:
             "Percent Utilization": np.sum(self.generation_amounts) / np.sum(self.available_amounts) * 100,
         }
 
+    def get_initial_cost(self):
+        return self.fixed_cost
+
+    def get_operation_cost(self):
+        return self.cost_per_wh * self.delta_t * np.sum(self.generation_amounts)
+
 
 class Grid(Generator):
     capacity: float
@@ -44,6 +56,8 @@ class Grid(Generator):
     generate_next_tick: float
 
     def __init__(self, capacity: float, outage_period: float, mean_outage_length: float, outage_length_std: float):
+        # Cost from https://www.reuters.com/business/energy/ukraine-nearly-doubles-consumer-electricity-tariffs-help-power-sector-repairs-2024-05-31/
+        super().__init__(0, 0.099 / 1000)
         self.capacity = capacity
         self.outage_period = outage_period
         self.mean_outage_length = mean_outage_length
@@ -76,7 +90,9 @@ class DieselGenerator(Generator):
     start_generator_ratio: float
     stop_generator_ratio: float
 
-    def __init__(self, capacity: float, start_generator_ratio: float = 0.4, stop_generator_ratio: float = 0.2):
+    def __init__(self, price: float, cost_per_wh, capacity: float, start_generator_ratio: float = 0.4,
+                 stop_generator_ratio: float = 0.2):
+        super().__init__(price, cost_per_wh)
         self.capacity = capacity
         self.start_generator_ratio = start_generator_ratio
         self.stop_generator_ratio = stop_generator_ratio
@@ -124,6 +140,9 @@ class SolarPanel(Generator):
         Initialise new solar panel backed by Systeem_Amstelveen data
         :param capacity: Capacity of the solar panel in Wp
         """
+        # Cost of solar installation assumed to be the same as the current cost in poland. Data from:
+        # https://www.statista.com/statistics/1124327/poland-average-unit-price-of-pv-installation-depending-on-power
+        super().__init__(1.275 * capacity, 0)
         self.capacity = capacity
         self.start_timestamp = start_timestamp
 

@@ -1,6 +1,5 @@
 from functools import lru_cache
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from async_lru import alru_cache
@@ -50,14 +49,6 @@ def get_data():
     indices = data["Timestamp"].values.copy()
     print("Done with loading data")
     return data, indices
-
-
-if __name__ == '__main__':
-    data, indices = get_data()
-    first = data["Timestamp"][0]
-    x = (data["Timestamp"] - first) / pd.Timedelta('1h')
-    plt.plot(x, data["Nonheat_active_power"])
-    plt.show()
 
 
 @alru_cache(maxsize=None)
