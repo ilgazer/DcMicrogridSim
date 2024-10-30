@@ -68,7 +68,8 @@ class Grid(Generator):
         self.outage_ind_period = math.ceil(self.outage_period / self.delta_t)
         self.generate_next_tick = True
 
-        for index in range(0, sim_length, self.outage_ind_period):
+        # The first 20 hours are without power
+        for index in range(math.ceil(20 / delta_t), sim_length, self.outage_ind_period):
             outage_length = random.normalvariate(self.mean_outage_length, self.outage_length_std)
             outage_ind_len = math.floor(outage_length / self.delta_t)
             for i in range(min(self.outage_ind_period, self.sim_length - index)):

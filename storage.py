@@ -5,11 +5,13 @@ class Storage:
     storage_capacities: np.ndarray
     storage_amounts: np.ndarray
     initial_capacity: float
+    initial_amount: float
     charge_efficiency: float
     degradation: float
     delta_t: float
 
-    def __init__(self, initial_capacity: float, charge_efficiency: float, degradation: float):
+    def __init__(self, initial_capacity: float, charge_efficiency: float, degradation: float,
+                 initial_amount: float = None):
         """
         :param initial_capacity: The capacity of the battery at t=0.
         :param efficiency: The charge/discharge efficiency where 0.9 means 100Wh input translates to 90 Wh stored and available.
@@ -18,6 +20,7 @@ class Storage:
         self.initial_capacity = initial_capacity
         self.charge_efficiency = charge_efficiency
         self.degradation = degradation
+        self.initial_amount = initial_amount or initial_capacity / 2
 
     async def initialize(self, sim_length: int, delta_t: float):
         self.delta_t = delta_t
@@ -26,7 +29,7 @@ class Storage:
         self.storage_amounts = np.zeros(sim_length)
 
         self.storage_capacities[0] = self.initial_capacity
-        self.storage_amounts[0] = self.initial_capacity / 2
+        self.storage_amounts[0] = self.initial_amount
 
     def update(self, index: int, power_ratio: float) -> tuple[float, float]:
         """

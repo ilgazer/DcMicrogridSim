@@ -1,5 +1,7 @@
 import asyncio
 import math
+import os
+from datetime import datetime
 from typing import Union
 
 import numpy as np
@@ -96,50 +98,60 @@ class System:
 
         return self
 
-    def graph(self, show_each=True):
+    def graph(self, figname=None, show_each=True):
+        if figname is None:
+            figname = datetime.now().strftime("%Y%m%d-%H%M%S")
+        os.makedirs(f"figures/{figname}", exist_ok=True)
+
+        sim_days = int(self.sim_length * self.delta_t / 24)
+
+        def plt_plot(xs, y, *args, **kwargs):
+            xs = [a[0] / 24 for a in np.array_split(xs, sim_days)]
+            y = [np.average(a) for a in np.array_split(y, sim_days)]
+            plt.plot(xs, y, *args, **kwargs)
+
         x = np.arange(self.sim_length) * self.delta_t
 
         # Plotting each graph on a different subplot
-        plt.plot(x, self.total_stored, 'r', label="Total Stored")  # red line
-        plt.plot(x, self.total_capacity, 'g', label="Total Capacity")  # green line
-        plt.title("Batteries Over Time")
+        plt_plot(x, self.total_stored, 'r', label="Total Stored")  # red line
+        plt_plot(x, self.total_capacity, 'g', label="Total Capacity")  # green line
+        plt.title("Energy Storage Over Time")
         plt.ylim(bottom=np.min(self.total_stored, initial=0))
-        plt.xlabel("Time (hours)")
+        plt.xlabel("Time (days)")
         plt.ylabel("Energy (Wh)")
         plt.legend()
+        plt.savefig(f"figures/{figname}/total_storage.png")
         plt.show()
 
-        plt.plot(x, self.total_consumption, 'b')  # blue line
+        plt_plot(x, self.total_consumption, 'b')  # blue line
         plt.title("Total Consumption Over Time")
         plt.ylim(bottom=np.min(self.total_consumption, initial=0))
-        plt.xlabel("Time (hours)")
+        plt.xlabel("Time (days)")
         plt.ylabel("Power (W)")
+        plt.savefig(f"figures/{figname}/total_consumption.png")
         plt.show()
 
-        plt.plot(x, self.total_generation, 'm', label="Total Generation")
-        plt.plot(x, self.total_available_generation, 'r', label="Total Available")
+        plt_plot(x, self.total_generation, 'm', label="Total Generation")
+        plt_plot(x, self.total_available_generation, 'r', label="Total Available")
         plt.title("Generation Over Time")
         plt.ylim(bottom=np.min(self.total_generation, initial=0))
-        plt.xlabel("Time (hours)")
+        plt.xlabel("Time (days)")
         plt.ylabel("Power (W)")
         plt.legend()
+        plt.savefig(f"figures/{figname}/total_generation.png")
         plt.show()
 
         if show_each:
             for i, generator in enumerate(self.generators):
-                plt.plot(x, generator.generation_amounts, label=f"{generator.__class__.__name__} {i + 1}",
+                plt_plot(x, generator.generation_amounts, label=f"{generator.__class__.__name__} {i + 1}",
                          linestyle='--')
             plt.title("Generation Per Generator Over Time")
             plt.ylim(bottom=np.min(self.total_generation, initial=0))
-            plt.xlabel("Time (hours)")
+            plt.xlabel("Time (days)")
             plt.ylabel("Power (W)")
             plt.legend()
+            plt.savefig(f"figures/{figname}/generation_per_generator.png")
             plt.show()
-
-            for i, load in enumerate(self.loads):
-                plt.plot(x, load.consumption_amounts, label=f"{load.__class__.__name__} {i + 1}",
-                         linestyle='--')
-                plt.show()
 
     def stats(self, show_each=False):
         print(f"Total Generated: {np.sum(self.total_generation) * self.delta_t / 1000: .2f}kWh")
