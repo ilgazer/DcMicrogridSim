@@ -1,0 +1,2 @@
+household_power_consumption.csv filter=lfs diff=lfs merge=lfs -text
+Systeem_Amstelveen/2022_15min_data.csv filter=lfs diff=lfs merge=lfs -text

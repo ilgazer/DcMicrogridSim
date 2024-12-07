@@ -24,7 +24,6 @@ generators = [
 
 def add_loads(global_start, system):
     system.add(UCIDataLoad(pd.Timestamp("2006-12-26 0:00:00") + global_start))
-    system.add(UCIDataLoad(pd.Timestamp("2006-12-28 0:00:00") + global_start))
     system.add(UCIDataLoad(pd.Timestamp("2007-12-26 0:00:00") + global_start))
     system.add(UCIDataLoad(pd.Timestamp("2008-12-26 0:00:00") + global_start))
     system.add(UCIDataLoad(pd.Timestamp("2009-12-26 0:00:00") + global_start))
@@ -136,7 +135,7 @@ if __name__ == "__main__":
             keep_parents=1,
             crossover_type="single_point",
             mutation_type="random",
-            mutation_probability=0.5,
+            mutation_probability=0.6,
             gene_space=gene_space,
             gene_type=[int, float, float],
             on_generation=lambda _: tq.update(),
